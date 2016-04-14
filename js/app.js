@@ -3,10 +3,12 @@ var props = {
     colWidth: 101,
     bottomOffset: 20,
     topOffset: 75,
-    canvas: {x: 505, y: 606},
+    canvas: {x: 707, y: 606},
     goalY: this.rowHeight,
     celebratePoints: 10,
-} //this is a bit hacky...
+    levelParam: 1, //how many times do you have to go swimming to get to the next level?
+    oneupParam: 3 //how many levels before you get another life?
+} //this seems hack-y
 
 // Enemies our player must avoid
 var Enemy = function() {
@@ -29,17 +31,15 @@ Enemy.prototype.update = function(dt) {
 
     /* *
     * collision detection between our single instance of player and any enemy
-    *
     * */
-    if(this.x + props.colWidth >= player.x + props.colWidth/2 && this.x < player.x){
+    if(this.x + props.colWidth > player.x + props.colWidth/4 && player.x + (3/4)*props.colWidth > this.x){
         if(this.y < player.y + props.rowHeight && this.y >= player.y){
             player.die();
         }
     }
-
     /* once off the screen, reset the enemy position */
     if(this.x > props.canvas.x){
-        this.setMovement(dt);
+        this.setMovement();
     }
 };
 
@@ -54,8 +54,13 @@ Enemy.prototype.render = function() {
 */
 Enemy.prototype.setMovement = function() {
     var row = Math.floor((Math.random() * 3) + 1);
-    var initX = -(Math.random()) * 500; //start 0 - 500 px offscreen
-    this.speed = (Math.random() + 1) * 200;
+    var initX = -(Math.random() * 500) - props.colWidth; //start 0 - 500 px offscreen
+
+    /*
+    * speed is detemined sorta randomly
+    * with the caveat that there are slow lanes (lower is slower)
+    */
+    this.speed = (Math.random() + 1) * 300 - row * 75;
     this.x = initX;
     this.y = (row * props.rowHeight) - props.bottomOffset;
 }
@@ -95,7 +100,7 @@ Player.prototype.render = function(){
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 Player.prototype.setInitialPosition = function(){
-    this.x = props.colWidth * 2;
+    this.x = props.colWidth * 3;
     this.y = props.rowHeight * 4 - props.bottomOffset;
 }
 /* *
@@ -110,43 +115,35 @@ Player.prototype.setSprite = function(path){
 */
 Player.prototype.celebrate = function(){
     //increment the score;
-    playerScore = playerScore + props.celebratePoints;
-    updateScoreDisplay();
+    score.increment();
 
     //increase the enemyMult by adding enemies, which adds progressively more enemies...
-    if(Math.floor(enemyMult + 0.5) > enemyMult){
+    if(Math.floor(enemyMult + 1/props.levelParam) > enemyMult){
         allEnemies.push(new Enemy());
-        var els = document.getElementsByClassName("enemyCount");
-        [].forEach.call(els,function(el){
-            el.textContent = Math.floor(allEnemies.length);
-        });
+        level.increment();
     }
-    enemyMult = enemyMult + 0.5;
+    enemyMult = enemyMult + 1/props.levelParam;
+
+    //one-up every three levels
+    if(level.getValue() % props.oneupParam == 0){
+        lives.oneUp();
+    }
 
     //return the player to initial position
     this.setInitialPosition();
 }
 
 /* *
-* die() dfines what happens when an enemy collides with the player
+* die() dfines what happens when an enemy collides with the player.
+* the player is just returned to their original position.
 */
 Player.prototype.die = function(){
     this.setInitialPosition();
+    lives.increment();
+    if(lives.getValue() == 0){
+        reset();
+    }
 }
-
-// Now instantiate your objects.
-// Place all enemy objects in an array called allEnemies
-// Place the player object in a variable called player
-
-
-var playerScore = 0;
-var allEnemies = [];
-var enemyMult = 1.0; //initial number of enemies
-for(var i = 0; i < Math.floor(enemyMult); i++){
-    allEnemies.push(new Enemy());
-    updateEnemyDisplay();
-}
-var player = new Player();
 
 // This listens for key presses and sends the keys to your
 // Player.handleInput() method. You don't need to modify this.
@@ -157,31 +154,76 @@ document.addEventListener('keyup', function(e) {
         39: 'right',
         40: 'down'
     };
-
     player.handleInput(allowedKeys[e.keyCode]);
 });
 
-
-/* this provides the reset button functionality */
+/*
+* Reset() resets all objects.
+* I did not use the reset() function in engine.js
+* because these classes can't seem to call it...
+* probably just need to add it to the global scope.
+* TODO: use the engine.js reset classes
+*/
 function reset(){
-    playerScore = 0;
+    level.reset();
+    lives.reset();
+    score.reset();
     allEnemies = [];
     enemyMult = 1.0; //initial number of enemies
     allEnemies.push(new Enemy());
-    updateScoreDisplay();
-    updateEnemyDisplay();
 }
-//this updates the score value that's shown on the page
-function updateScoreDisplay(){
-    var scoreEls = document.getElementsByClassName("playerScore");
-    [].forEach.call(scoreEls,function(el){
-        el.textContent = playerScore;
-    });
+
+/* the counter object is used to store and display score and level in the game */
+var Counter = function(x, y, name, initialValue, incrementAmount){
+    this.constructor
+    this.fontSize = 24;
+    this.font = this.fontSize+'px sans-serif';
+    this.x = x;
+    this.y = y;
+    this.name = name;
+    this.initialValue = initialValue;
+    this.value = initialValue;
+    this.incrementAmount = incrementAmount || 1;
+};
+/* render() renders the name/value pair on a white background in the game */
+Counter.prototype.render = function(){
+    ctx.font = this.font;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillRect(this.x, this.y - this.fontSize, this.fontSize * this.name.length , this.fontSize + 3);
+    ctx.fillStyle = 'black';
+    ctx.fillText(this.name + ': ' + this.value, this.x, this.y);
+};
+/* setValue() sets the counter value */
+Counter.prototype.setValue = function(val){
+    this.value = val;
+};
+/* getValue returns the current value */
+Counter.prototype.getValue = function(){
+    return this.value;
+};
+/* increment adds the incrementValue to the current value of the counter */
+Counter.prototype.increment = function(){
+    this.value = this.value + this.incrementAmount;
+};
+/* reset() the counter to its original value */
+Counter.prototype.reset = function(){
+    this.value = this.initialValue;
 }
-//this updates the enemy count that's shown on the page
-function updateEnemyDisplay(){
-    var els = document.getElementsByClassName("enemyCount");
-    [].forEach.call(els,function(el){
-        el.textContent = allEnemies.length;
-    });
+
+// Now instantiate your objects.
+// Place all enemy objects in an array called allEnemies
+// Place the player object in a variable called player
+var allEnemies = [];
+var enemyMult = 1.0; //initial number of enemies
+allEnemies.push(new Enemy());
+
+//initialize our various counters
+var level = new Counter(5, 575, 'Level', 1);
+var score = new Counter(5, 540, 'Score', 0, 10);
+var lives = new Counter(5, 505, 'Lives', 3, -1);
+
+//oneUp extends the generic Counter. When you go up a level, you get an extra life!
+lives.oneUp = function(){
+    this.value++;
 }
+var player = new Player();
