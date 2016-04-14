@@ -6,8 +6,6 @@ var props = {
     canvas: {x: 505, y: 606},
     goalY: this.rowHeight,
     celebratePoints: 10,
-    diePoints: -10,
-    gemPoints: 5
 } //this is a bit hacky...
 
 // Enemies our player must avoid
@@ -57,7 +55,7 @@ Enemy.prototype.render = function() {
 Enemy.prototype.setMovement = function() {
     var row = Math.floor((Math.random() * 3) + 1);
     var initX = -(Math.random()) * 500; //start 0 - 500 px offscreen
-    this.speed = (Math.random() + 1) * 300;
+    this.speed = (Math.random() + 1) * 200;
     this.x = initX;
     this.y = (row * props.rowHeight) - props.bottomOffset;
 }
@@ -128,12 +126,11 @@ Player.prototype.celebrate = function(){
     //return the player to initial position
     this.setInitialPosition();
 }
+
 /* *
 * die() dfines what happens when an enemy collides with the player
 */
 Player.prototype.die = function(){
-    playerScore = playerScore - 10;
-    updateScoreDisplay();
     this.setInitialPosition();
 }
 
