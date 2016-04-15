@@ -1,14 +1,16 @@
+/**
+* props is an object containing a bunch of constants
+*/
 var props = {
-    rowHeight: 83,
-    colWidth: 101,
-    bottomOffset: 20,
-    topOffset: 75,
-    canvas: {x: 707, y: 606},
-    goalY: this.rowHeight,
-    celebratePoints: 10,
-    levelParam: 1, //how many times do you have to go swimming to get to the next level?
-    oneupParam: 3 //how many levels before you get another life?
-} //this seems hack-y
+    rowHeight: 83, // height of a row
+    colWidth: 101, // width of a column
+    bottomOffset: 20, //empty space on y axis at bottom of sprites
+    topOffset: 75, //empty space at the top of sprites
+    canvas: {x: 707, y: 606}, //canvas width/height
+    celebratePoints: 10, // number of points to increment upon reaching water
+    levelParam: 1, //number of times do you have to go swimming to get to the next level
+    oneupParam: 3 // number levels before you are awarded another life
+}
 
 // Enemies our player must avoid
 var Enemy = function() {
@@ -48,9 +50,8 @@ Enemy.prototype.render = function() {
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
-/* *
-* Set an initial position for an Enemy instance
-* Set a random speed between 300 and 600 for the Enemy instance
+/**
+* @description Set an initial position for an Enemy instance
 */
 Enemy.prototype.setMovement = function() {
     var row = Math.floor((Math.random() * 3) + 1);
@@ -58,7 +59,7 @@ Enemy.prototype.setMovement = function() {
 
     /*
     * speed is detemined sorta randomly
-    * with the caveat that there are slow lanes (lower is slower)
+    * with the caveat that there are slow lanes (larger row values are slower)
     */
     this.speed = (Math.random() + 1) * 300 - row * 75;
     this.x = initX;
@@ -99,19 +100,22 @@ Player.prototype.update = function(){
 Player.prototype.render = function(){
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
+/**
+* @description sets initial player position
+*/
 Player.prototype.setInitialPosition = function(){
     this.x = props.colWidth * 3;
     this.y = props.rowHeight * 4 - props.bottomOffset;
 }
-/* *
-* set a different sprite
-* param path is the path to the image
+/**
+* @description set a different sprite
+* @param {string} path is the path to the image
 */
 Player.prototype.setSprite = function(path){
     this.sprite = path;
 }
-/* *
-* celebrate() defines what happens when the player reaches the water
+/**
+* @description Defines what happens when the player reaches the water
 */
 Player.prototype.celebrate = function(){
     //increment the score;
@@ -133,9 +137,10 @@ Player.prototype.celebrate = function(){
     this.setInitialPosition();
 }
 
-/* *
-* die() dfines what happens when an enemy collides with the player.
-* the player is just returned to their original position.
+/**
+* @description Deines what happens when an enemy collides with the player.
+* The player is returned to their original position and lives decremented.
+* The game is reset if player's out of lives.
 */
 Player.prototype.die = function(){
     this.setInitialPosition();
@@ -157,12 +162,9 @@ document.addEventListener('keyup', function(e) {
     player.handleInput(allowedKeys[e.keyCode]);
 });
 
-/*
-* Reset() resets all objects.
-* I did not use the reset() function in engine.js
-* because these classes can't seem to call it...
-* probably just need to add it to the global scope.
-* TODO: use the engine.js reset classes
+/**
+* @description Resets all objects.
+* TODO: use the engine.js reset method
 */
 function reset(){
     level.reset();
@@ -173,7 +175,15 @@ function reset(){
     allEnemies.push(new Enemy());
 }
 
-/* the counter object is used to store and display score and level in the game */
+/**
+* @description The Counter object is used to store and display score and level in the game
+* @constructor
+* @param {integer} x - x-position on canvas of Counter
+* @param {integer} y - y-position on canvas of Counter
+* @param {string} name - display name of the Counter
+* @param {integer} initialValue – initial value of Counter
+* @param {integer} incrementAmount - how much Counter will be incremented when increment() is called
+*/
 var Counter = function(x, y, name, initialValue, incrementAmount){
     this.constructor
     this.fontSize = 24;
@@ -185,7 +195,10 @@ var Counter = function(x, y, name, initialValue, incrementAmount){
     this.value = initialValue;
     this.incrementAmount = incrementAmount || 1;
 };
-/* render() renders the name/value pair on a white background in the game */
+
+/**
+* @description Render() renders the name/value pair on a white background in the game
+*/
 Counter.prototype.render = function(){
     ctx.font = this.font;
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
@@ -193,19 +206,32 @@ Counter.prototype.render = function(){
     ctx.fillStyle = 'black';
     ctx.fillText(this.name + ': ' + this.value, this.x, this.y);
 };
-/* setValue() sets the counter value */
+
+/**
+* @description setValue() sets the counter value
+* @param {integer} val - value to set Counter to
+*/
 Counter.prototype.setValue = function(val){
     this.value = val;
 };
-/* getValue returns the current value */
+
+/**
+* @description getValue returns the current value
+*/
 Counter.prototype.getValue = function(){
     return this.value;
 };
-/* increment adds the incrementValue to the current value of the counter */
+
+/**
+* @description Adds the incrementValue to the current value of the counter
+*/
 Counter.prototype.increment = function(){
     this.value = this.value + this.incrementAmount;
 };
-/* reset() the counter to its original value */
+
+/**
+* @description Set the counter to its original value
+*/
 Counter.prototype.reset = function(){
     this.value = this.initialValue;
 }
